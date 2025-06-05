@@ -8,10 +8,27 @@ from datetime import datetime
 BACKEND_URL = "https://eb7c655d-c436-4c07-8a6a-f9b221aaf927.preview.emergentagent.com/api"
 
 class OlimpiadAPITester(unittest.TestCase):
-    def setUp(self):
-        self.base_url = BACKEND_URL
-        self.test_olimpiad_id = None
-        self.test_feature_id = None
+    @classmethod
+    def setUpClass(cls):
+        cls.base_url = BACKEND_URL
+        cls.test_olimpiad_id = None
+        cls.test_feature_id = None
+        
+        # Get initial data
+        print("\n🔍 Initial data setup...")
+        response = requests.get(f"{cls.base_url}/olimpiads")
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                cls.test_olimpiad_id = data[0]['id']
+                print(f"📝 Using existing olimpiad ID: {cls.test_olimpiad_id} for tests")
+        
+        response = requests.get(f"{cls.base_url}/features")
+        if response.status_code == 200:
+            data = response.json()
+            if data:
+                cls.test_feature_id = data[0]['id']
+                print(f"📝 Using existing feature ID: {cls.test_feature_id} for tests")
         
     def test_01_get_all_olimpiads(self):
         """Test GET /api/olimpiads endpoint"""
@@ -21,11 +38,6 @@ class OlimpiadAPITester(unittest.TestCase):
         data = response.json()
         self.assertIsInstance(data, list)
         print(f"✅ Success - Found {len(data)} olimpiads")
-        
-        # Save the first olimpiad ID for later tests if available
-        if data:
-            self.test_olimpiad_id = data[0]['id']
-            print(f"📝 Using olimpiad ID: {self.test_olimpiad_id} for future tests")
     
     def test_02_filter_olimpiads_by_status(self):
         """Test GET /api/olimpiads?status=upcoming endpoint"""
@@ -74,15 +86,15 @@ class OlimpiadAPITester(unittest.TestCase):
     
     def test_05_get_specific_olimpiad(self):
         """Test GET /api/olimpiads/{olimpiad_id} endpoint"""
-        if not self.test_olimpiad_id:
+        if not self.__class__.test_olimpiad_id:
             print("\n⚠️ Skipping test_get_specific_olimpiad - No olimpiad ID available")
             return
             
-        print(f"\n🔍 Testing GET /api/olimpiads/{self.test_olimpiad_id}...")
-        response = requests.get(f"{self.base_url}/olimpiads/{self.test_olimpiad_id}")
+        print(f"\n🔍 Testing GET /api/olimpiads/{self.__class__.test_olimpiad_id}...")
+        response = requests.get(f"{self.base_url}/olimpiads/{self.__class__.test_olimpiad_id}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data['id'], self.test_olimpiad_id)
+        self.assertEqual(data['id'], self.__class__.test_olimpiad_id)
         print("✅ Success - Retrieved specific olimpiad")
     
     def test_06_get_dynamic_features(self):
@@ -92,12 +104,6 @@ class OlimpiadAPITester(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIsInstance(data, list)
-        
-        # Save a feature ID for later tests if available
-        if data:
-            self.test_feature_id = data[0]['id']
-            print(f"📝 Using feature ID: {self.test_feature_id} for future tests")
-            
         print(f"✅ Success - Found {len(data)} dynamic features")
     
     def test_07_create_olimpiad(self):
@@ -132,16 +138,16 @@ class OlimpiadAPITester(unittest.TestCase):
         self.assertEqual(data['status'], test_data['status'])
         
         # Save the created olimpiad ID for update and delete tests
-        self.test_olimpiad_id = data['id']
-        print(f"✅ Success - Created olimpiad with ID: {self.test_olimpiad_id}")
+        self.__class__.created_olimpiad_id = data['id']
+        print(f"✅ Success - Created olimpiad with ID: {self.__class__.created_olimpiad_id}")
     
     def test_08_update_olimpiad(self):
         """Test PUT /api/olimpiads/{olimpiad_id} endpoint"""
-        if not self.test_olimpiad_id:
-            print("\n⚠️ Skipping test_update_olimpiad - No olimpiad ID available")
+        if not hasattr(self.__class__, 'created_olimpiad_id'):
+            print("\n⚠️ Skipping test_update_olimpiad - No created olimpiad ID available")
             return
             
-        print(f"\n🔍 Testing PUT /api/olimpiads/{self.test_olimpiad_id}...")
+        print(f"\n🔍 Testing PUT /api/olimpiads/{self.__class__.created_olimpiad_id}...")
         
         # Update data
         update_data = {
@@ -149,7 +155,7 @@ class OlimpiadAPITester(unittest.TestCase):
             "status": "register_opened"
         }
         
-        response = requests.put(f"{self.base_url}/olimpiads/{self.test_olimpiad_id}", json=update_data)
+        response = requests.put(f"{self.base_url}/olimpiads/{self.__class__.created_olimpiad_id}", json=update_data)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['name'], update_data['name'])
@@ -173,24 +179,24 @@ class OlimpiadAPITester(unittest.TestCase):
         self.assertEqual(data['type'], test_feature['type'])
         
         # Save the created feature ID for delete test
-        self.test_feature_id = data['id']
-        print(f"✅ Success - Created feature with ID: {self.test_feature_id}")
+        self.__class__.created_feature_id = data['id']
+        print(f"✅ Success - Created feature with ID: {self.__class__.created_feature_id}")
         
         # Verify the feature was added to existing olimpiads
-        if self.test_olimpiad_id:
-            response = requests.get(f"{self.base_url}/olimpiads/{self.test_olimpiad_id}")
+        if hasattr(self.__class__, 'created_olimpiad_id'):
+            response = requests.get(f"{self.base_url}/olimpiads/{self.__class__.created_olimpiad_id}")
             olimpiad_data = response.json()
-            self.assertIn(self.test_feature_id, olimpiad_data['dynamic_features'])
+            self.assertIn(self.__class__.created_feature_id, olimpiad_data['dynamic_features'])
             print("✅ Success - Feature was added to existing olimpiad")
     
     def test_10_delete_dynamic_feature(self):
         """Test DELETE /api/features/{feature_id} endpoint"""
-        if not self.test_feature_id:
-            print("\n⚠️ Skipping test_delete_dynamic_feature - No feature ID available")
+        if not hasattr(self.__class__, 'created_feature_id'):
+            print("\n⚠️ Skipping test_delete_dynamic_feature - No created feature ID available")
             return
             
-        print(f"\n🔍 Testing DELETE /api/features/{self.test_feature_id}...")
-        response = requests.delete(f"{self.base_url}/features/{self.test_feature_id}")
+        print(f"\n🔍 Testing DELETE /api/features/{self.__class__.created_feature_id}...")
+        response = requests.delete(f"{self.base_url}/features/{self.__class__.created_feature_id}")
         self.assertEqual(response.status_code, 200)
         print("✅ Success - Deleted feature")
         
@@ -198,22 +204,22 @@ class OlimpiadAPITester(unittest.TestCase):
         response = requests.get(f"{self.base_url}/features")
         features = response.json()
         feature_ids = [f['id'] for f in features]
-        self.assertNotIn(self.test_feature_id, feature_ids)
+        self.assertNotIn(self.__class__.created_feature_id, feature_ids)
         print("✅ Success - Feature was removed from the list")
     
     def test_11_delete_olimpiad(self):
         """Test DELETE /api/olimpiads/{olimpiad_id} endpoint"""
-        if not self.test_olimpiad_id:
-            print("\n⚠️ Skipping test_delete_olimpiad - No olimpiad ID available")
+        if not hasattr(self.__class__, 'created_olimpiad_id'):
+            print("\n⚠️ Skipping test_delete_olimpiad - No created olimpiad ID available")
             return
             
-        print(f"\n🔍 Testing DELETE /api/olimpiads/{self.test_olimpiad_id}...")
-        response = requests.delete(f"{self.base_url}/olimpiads/{self.test_olimpiad_id}")
+        print(f"\n🔍 Testing DELETE /api/olimpiads/{self.__class__.created_olimpiad_id}...")
+        response = requests.delete(f"{self.base_url}/olimpiads/{self.__class__.created_olimpiad_id}")
         self.assertEqual(response.status_code, 200)
         print("✅ Success - Deleted olimpiad")
         
         # Verify the olimpiad was removed
-        response = requests.get(f"{self.base_url}/olimpiads/{self.test_olimpiad_id}")
+        response = requests.get(f"{self.base_url}/olimpiads/{self.__class__.created_olimpiad_id}")
         self.assertEqual(response.status_code, 404)
         print("✅ Success - Olimpiad was removed and returns 404")
 

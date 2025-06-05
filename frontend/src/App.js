@@ -668,6 +668,177 @@ const AdvancedFiltering = ({ olimpiads, onFilterChange }) => {
   );
 };
 
+// Password prompt component
+const PasswordPrompt = ({ onSubmit, onCancel }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      onSubmit();
+    } else {
+      setError('Incorrect password');
+      setPassword('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold mb-4">Admin Access</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError('');
+              }}
+              className="w-full border rounded px-3 py-2"
+              placeholder="Enter admin password"
+              autoFocus
+            />
+            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+          </div>
+          <div className="flex space-x-2">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Access
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Advanced filtering component
+const AdvancedFiltering = ({ olimpiads, onFilterChange }) => {
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Get unique subjects from olimpiads
+  const uniqueSubjects = [...new Set(olimpiads.map(o => o.subject))].sort();
+
+  const handleSubjectChange = (subject) => {
+    setSelectedSubjects(prev => 
+      prev.includes(subject) 
+        ? prev.filter(s => s !== subject)
+        : [...prev, subject]
+    );
+  };
+
+  const handleSearch = () => {
+    onFilterChange({
+      subjects: selectedSubjects,
+      status: selectedStatus,
+      searchTerm: searchTerm.trim()
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedSubjects([]);
+    setSelectedStatus('all');
+    setSearchTerm('');
+    onFilterChange({
+      subjects: [],
+      status: 'all',
+      searchTerm: ''
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h3 className="text-lg font-semibold mb-4">Filter Olimpiads</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Search by Name */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Search by Name</label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Enter olimpiad name..."
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Status</label>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="w-full border rounded px-3 py-2"
+          >
+            <option value="all">All Statuses</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="register_opened">Register Opened</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        {/* Subject Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Filter by Subject (Multi-select)</label>
+          <div className="border rounded px-3 py-2 max-h-32 overflow-y-auto">
+            {uniqueSubjects.length > 0 ? (
+              uniqueSubjects.map(subject => (
+                <label key={subject} className="flex items-center space-x-2 py-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedSubjects.includes(subject)}
+                    onChange={() => handleSubjectChange(subject)}
+                    className="rounded"
+                  />
+                  <span className="text-sm">{subject}</span>
+                </label>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No subjects available</p>
+            )}
+          </div>
+          {selectedSubjects.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs text-gray-600">Selected: {selectedSubjects.join(', ')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex space-x-3 mt-6">
+        <button
+          onClick={handleSearch}
+          className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Apply Filters
+        </button>
+        <button
+          onClick={clearFilters}
+          className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          Clear All
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Main App component
 function App() {
   const [olimpiads, setOlipiads] = useState([]);

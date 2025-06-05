@@ -27,58 +27,160 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Olimpiad card component
-const OlimpiadCard = ({ olimpiad, onEdit, onDelete, isAdmin }) => {
+// Olimpiad card component for listing (minimal info)
+const OlimpiadCard = ({ olimpiad, onEdit, onDelete, onViewDetails, isAdmin }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          {olimpiad.avatar && (
-            <img 
-              src={olimpiad.avatar} 
-              alt={olimpiad.name}
-              className="w-12 h-12 rounded-full object-cover"
-            />
-          )}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{olimpiad.name}</h3>
-            <p className="text-sm text-gray-600">{olimpiad.subject}</p>
-          </div>
+        <div 
+          className="flex-1"
+          onClick={() => onViewDetails(olimpiad)}
+        >
+          <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+            {olimpiad.name}
+          </h3>
+          <p className="text-sm text-gray-600">{olimpiad.subject}</p>
         </div>
         <StatusBadge status={olimpiad.status} />
       </div>
       
-      <div className="space-y-2 mb-4">
-        <p className="text-sm"><span className="font-medium">Level:</span> {olimpiad.level}</p>
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => onViewDetails(olimpiad)}
+          className="text-blue-500 text-sm hover:text-blue-700 transition-colors"
+        >
+          View Details →
+        </button>
         
-        {olimpiad.dates && olimpiad.dates.length > 0 && (
-          <div>
-            <p className="font-medium text-sm mb-1">DATES:</p>
-            {olimpiad.dates.map((date, index) => (
-              <p key={index} className="text-sm text-gray-600 ml-2">
-                {date.text}: {new Date(date.date).toLocaleDateString()}
-              </p>
-            ))}
+        {isAdmin && (
+          <div className="flex space-x-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(olimpiad);
+              }}
+              className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+            >
+              Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(olimpiad.id);
+              }}
+              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
           </div>
         )}
       </div>
-      
-      {isAdmin && (
-        <div className="flex space-x-2 pt-4 border-t">
-          <button
-            onClick={() => onEdit(olimpiad)}
-            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(olimpiad.id)}
-            className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-          >
-            Delete
-          </button>
+    </div>
+  );
+};
+
+// Olimpiad detail view component
+const OlimpiadDetailView = ({ olimpiad, features, onBack, onEdit, onDelete, isAdmin }) => {
+  if (!olimpiad) return null;
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-6">
+        <button
+          onClick={onBack}
+          className="flex items-center text-blue-500 hover:text-blue-700 transition-colors mb-4"
+        >
+          ← Back to Olimpiads
+        </button>
+        
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center space-x-6">
+              {olimpiad.avatar && (
+                <img 
+                  src={olimpiad.avatar} 
+                  alt={olimpiad.name}
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              )}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{olimpiad.name}</h1>
+                <p className="text-lg text-gray-600 mt-1">{olimpiad.subject}</p>
+                <div className="mt-3">
+                  <StatusBadge status={olimpiad.status} />
+                </div>
+              </div>
+            </div>
+            
+            {isAdmin && (
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => onEdit(olimpiad)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onDelete(olimpiad.id)}
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Level</h3>
+                <p className="text-gray-700">{olimpiad.level}</p>
+              </div>
+              
+              {olimpiad.dates && olimpiad.dates.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">DATES</h3>
+                  <div className="space-y-2">
+                    {olimpiad.dates.map((date, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded">
+                        <p className="font-medium text-gray-900">{date.text}</p>
+                        <p className="text-gray-600">{new Date(date.date).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {features.length > 0 && olimpiad.dynamic_features && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Additional Information</h3>
+                <div className="space-y-3">
+                  {features.map(feature => {
+                    const value = olimpiad.dynamic_features[feature.id];
+                    if (!value || value === 'none') return null;
+                    
+                    return (
+                      <div key={feature.id} className="bg-gray-50 p-3 rounded">
+                        <p className="font-medium text-gray-900 mb-1">{feature.name}</p>
+                        {feature.type === 'img' ? (
+                          <img 
+                            src={value} 
+                            alt={feature.name}
+                            className="w-20 h-20 object-cover rounded"
+                          />
+                        ) : (
+                          <p className="text-gray-700">{value}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
